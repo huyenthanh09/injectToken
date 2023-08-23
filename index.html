@@ -1,0 +1,170 @@
+<!-- (C) 2017-2021 GoodData Corporation -->
+<!DOCTYPE html>
+<!--
+   =================  INSTRUCTIONS =============
+   in the directory where this file is located, run
+   `python -m SimpleHTTPServer 8000`
+   or (for python version3)
+   `python -m http.server 8000`
+   `python3 -m http.server 8000`
+
+   and then visit http://localhost:8000
+-->
+
+
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Embedded AD controlled via postMessage</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                padding: 0;
+                margin: 0;
+            }
+            details summary {
+                cursor: pointer;
+            }
+            details summary:hover {
+                text-decoration: underline;
+            }
+            .messages {
+                border: 1px solid #dedede;
+                height: 200px;
+                overflow: scroll;
+            }
+        </style>
+    </head>
+    <body>
+        <div>Don't forget to use <b>/embedded</b>, e.g. https://localhost:8444/analyze/embedded/#/1aa38f91e6e040dca16917cd247bb3c0</div>
+        <input placeholder="url of the page" type="text" id="url" style="width: 600px"></input>
+        <button id="button">load</button>
+        <textarea id="textarea" placeholder="Enter the message" style="height: 200px; width: 300px"></textarea>
+        <button id="send">send</button>
+        <a href="https://help.gooddata.com/doc/enterprise/en/expand-your-gooddata-platform/gooddata-integration-into-your-application/embed-gooddata-elements-into-your-applications/embed-analytical-designer/communication-with-embedded-analytical-designer">Specs</a>
+        <div>Examples</div>
+        <details>
+            <summary>AD Clear</summary>
+            <pre>
+                {
+                    "gdc": {
+                        "product": "analyticalDesigner",
+                        "event": {
+                            "name": "clear",
+                            "contextId": "context123"
+                        }
+                    }
+                }
+            </pre>
+        </details>
+        <details>
+            <summary>AD Attribute filter</summary>
+            <pre>
+                {
+                    "gdc": {
+                        "product": "analyticalDesigner",
+                        "event": {
+                            "name": "setFilterContext",
+                            "data": {
+                                "filters": [
+                                    {
+                                        "positiveAttributeFilter": {
+                                            "displayForm": {
+                                                "identifier": "3e8fbe24a562476e907521c96325b2d9:label.f_opportunity.opportunity.name"
+                                            },
+                                            "in": ["(add)ventures > CompuSci", "(mt) Media Temple > CompuSci"]
+                                        }
+                                    }
+                                ]
+                            },
+                            "contextId": "context123"
+                        }
+                    }
+                }
+            </pre>
+        </details>
+        <details>
+            <summary>AD Date filter</summary>
+            <pre>
+                {
+                    "gdc": {
+                        "product": "analyticalDesigner",
+                        "event": {
+                            "name": "setFilterContext",
+                            "data": {
+                                "filters": [
+                                    {
+                                        "relativeDateFilter": {
+                                            "dataSet": {
+                                                "identifier": "3e8fbe24a562476e907521c96325b2d9:dt_closedate_timestamp", "type": "dataSet"
+                                            },
+                                            "granularity": "GDC.time.year",
+                                            "from": -1,
+                                            "to": 0
+                                        }
+                                    }
+                                ]
+                            },
+                            "contextId": "context123"
+                        }
+                    }
+                }
+           </pre>
+        </details>
+        <iframe src="" title="embeddedAD" id="embedded" frameborder="1" width="1300" height="800"> </iframe>
+        <div>Messages <button id="clear">clear</button></div>
+        <div class="messages">
+        </div>
+        <script>
+            function addItem(parent, name, content) {
+                const summary = document.createElement('summary');
+                const now = new Date().toLocaleString();
+                summary.innerText = `${now} ${name}`;
+                const value = document.createElement('pre');
+                value.innerText = content;
+                const details = document.createElement('details');
+                details.appendChild(summary);
+                details.appendChild(value);
+                parent.appendChild(details);
+            }
+            function initiateLoad() {
+                // reload iframe
+                document.querySelector('#embedded').src = 'about:blank';
+                setTimeout(() => {
+                    document.querySelector('#embedded').src = document.getElementById('url').value;
+                }, 100);
+            }
+            function clearMessages() {
+                document.querySelector('.messages').innerText = '';
+            }
+
+            document.querySelector('#url').addEventListener("keypress", function(event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    initiateLoad();
+                }
+            });
+
+            window.addEventListener('message', (m) => {
+                const wrap = document.querySelector('.messages');
+                if (m?.data?.gdc?.event?.name) {
+                    addItem(wrap, m.data.gdc.event.name, JSON.stringify(m.data.gdc));
+                }
+            });
+
+            document.querySelector('#button').addEventListener('click', () => {
+                initiateLoad();
+            });
+
+            document.querySelector('#clear').addEventListener('click', () => {
+                clearMessages();
+            });
+
+            document.querySelector('#send').addEventListener('click', () => {
+                var message = document.getElementById("textarea").value;
+                var parsed = JSON.parse(message);
+                document.querySelector('#embedded').contentWindow.postMessage(parsed, '*');
+            });
+        </script>
+    </body>
+</html>
